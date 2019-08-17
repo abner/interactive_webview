@@ -5,8 +5,8 @@ import android.app.Activity
 import android.content.pm.ApplicationInfo
 import android.graphics.Bitmap
 import android.os.Build
-import android.os.Handler
-import android.os.Looper
+import android.os.Handler;
+import android.os.Looper;
 import android.view.View
 import android.webkit.JavascriptInterface
 import android.webkit.WebResourceRequest
@@ -32,6 +32,7 @@ class InteractiveWebviewPlugin(private val activity: Activity): MethodCallHandle
 
     companion object {
         lateinit var channel: MethodChannel
+        var handler = Handler(Looper.getMainLooper())
 
         @JvmStatic
         fun registerWith(registrar: Registrar): Unit {
@@ -117,14 +118,21 @@ class InteractiveWebViewClient(var restrictedSchemes: List<String>): WebViewClie
         val data = hashMapOf<String, Any>()
         data["url"] = url!!
         data["type"] = "didStart"
-        InteractiveWebviewPlugin.channel.invokeMethod("stateChanged", data)
+        InteractiveWebviewPlugin.handler.post(Runnable {
+//            override fun run() {
+                InteractiveWebviewPlugin.channel.invokeMethod("stateChanged", data)
+//            }
+        });
     }
 
     override fun onPageFinished(view: WebView?, url: String?) {
         val data = hashMapOf<String, Any>()
         data["url"] = url!!
         data["type"] = "didFinish"
-        InteractiveWebviewPlugin.channel.invokeMethod("stateChanged", data)
+        InteractiveWebviewPlugin.handler.post(Runnable {
+            InteractiveWebviewPlugin.channel.invokeMethod("stateChanged", data)
+        });
+//        InteractiveWebviewPlugin.channel.invokeMethod("stateChanged", data)
     }
 
     override fun shouldOverrideUrlLoading(view: WebView?, url: String?): Boolean {
@@ -171,9 +179,10 @@ class JsInterface {
                 message["data"] = it
             }
 
-            Handler(Looper.getMainLooper()).post {
+            InteractiveWebviewPlugin.handler.post(Runnable {
                 InteractiveWebviewPlugin.channel.invokeMethod("didReceiveMessage", message)
-            }
+            });
+//            InteractiveWebviewPlugin.channel.invokeMethod("didReceiveMessage", message)
         }
     }
 
